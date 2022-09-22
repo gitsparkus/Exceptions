@@ -1,3 +1,6 @@
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 public class task1 {
@@ -31,69 +34,115 @@ public class task1 {
     должен увидеть стектрейс ошибки.
      */
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws AmountOfDataException, NoRequiredDataException, IOException {
         String input = "-";
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Введите данные: ");
-        input = scanner.nextLine();
-
         Map<String, String> person = new HashMap<String, String>();
 
 
         while (!input.isEmpty()) {
 
-            List<String> list = new ArrayList<String>(Arrays.asList(input.split(" ")));
-            if (list.size() != 6) {
-                throw new RuntimeException("Введены не все данные!");
-            }
-            System.out.println(Arrays.toString(list.toArray()));
-
-
-            for (String element : list) {
-                if (element.equals("f") || element.equals("m")) {
-                    person.put("sex", element);
-                } else
-                if (element.matches("^[0-9]+$")) {
-                    person.put("phone", element);
-                } else
-                if (element.matches("^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$")) {
-                    person.put("date", element);
-                } else {
-                    if (!person.containsKey("surname")) {
-                        person.put("surname", element);
-                    } else if (!person.containsKey("name")) {
-                        person.put("name", element);
-                    } else {
-                        person.put("patronymic", element);
-                    }
-                }
-            }
-
-
-            if (!person.containsKey("sex")) {
-                throw new RuntimeException("Не указан пол!");
-            }
-
-            if (!person.containsKey("phone")) {
-                throw new RuntimeException("Не указан номер телефона!");
-            }
-
-            if (!person.containsKey("date")) {
-                throw new RuntimeException("Не указана дата!");
-            }
-
-            if (!person.containsKey("surname")) {
-                throw new RuntimeException("Не указаны Фамилия, Имя или Отчество!");
-            }
-
-
-            person.entrySet().forEach(entry -> {
-                System.out.println(entry.getKey() + " " + entry.getValue());
-            });
-
             System.out.print("Введите данные: ");
             input = scanner.nextLine();
+
+            if (!input.isEmpty()) {
+                try {
+                    person = parseData(input);
+                    checkData(person);
+                    try {
+                        writeToFilePerson(person);
+                    }
+                    catch (MyFileException ex) {
+                        System.out.println(ex.getMessage());
+                        System.out.println(ex.getStackTraceAsString());
+                    }
+                } catch (AmountOfDataException | NoRequiredDataException ex) {
+                    System.out.println(ex.getMessage());
+                }
+
+            }
         }
     }
 
+    public static Map<String, String> parseData(String input) throws AmountOfDataException {
+        Map<String, String> person = new HashMap<String, String>();
+        List<String> list = new ArrayList<String>(Arrays.asList(input.split(" ")));
+        System.out.println(Arrays.toString(list.toArray()));
+        if (list.size() > 6) {
+            throw new AmountOfDataException("Введено больше данных!");
+        }
+        if (list.size() < 6) {
+            throw new AmountOfDataException("Введено меньше данных!");
+        }
+
+        for (String element : list) {
+            if (element.equals("f") || element.equals("m")) {
+                person.put("sex", element);
+            } else if (element.matches("^[0-9]+$")) {
+                person.put("phone", element);
+            } else if (element.matches("^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$")) {
+                person.put("date", element);
+            } else {
+                if (!person.containsKey("surname")) {
+                    person.put("surname", element);
+                } else if (!person.containsKey("name")) {
+                    person.put("name", element);
+                } else {
+                    person.put("patronymic", element);
+                }
+            }
+        }
+        return person;
+    }
+
+    public static void checkData(Map<String, String> person) throws NoRequiredDataException {
+        if (!person.containsKey("sex")) {
+            throw new NoRequiredDataException("Не указан пол!");
+        }
+
+        if (!person.containsKey("phone")) {
+            throw new NoRequiredDataException("Не указан номер телефона!");
+        }
+
+        if (!person.containsKey("date")) {
+            throw new NoRequiredDataException("Не указана дата!");
+        }
+
+        if (!person.containsKey("surname")) {
+            throw new NoRequiredDataException("Не указаны Фамилия, Имя или Отчество!");
+        }
+
+        person.entrySet().forEach(entry -> {
+            System.out.println(entry.getKey() + " " + entry.getValue());
+        });
+
+    }
+
+    public static void writeToFilePerson(Map<String, String> person) throws MyFileException {
+        File f = new File(person.get("surname"));
+        try {
+            if (!f.exists()) {
+                f.createNewFile();
+            }
+
+            Scanner scanner = new Scanner(System.in);
+            String input = scanner.nextLine();
+
+
+            try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(person.get("surname"), true)))) {
+
+                out.println("<" + person.get("surname") +
+                        "><" + person.get("name") + "><" +
+                        person.get("patronymic") + "><" +
+                        person.get("date") + "> <" +
+                        person.get("phone") + "><" +
+                        person.get("sex") + ">");
+            }
+            catch (IOException ex) {
+                throw new MyFileException("Ошибка записи в файл!", ex.getStackTrace());
+            }
+        } catch (IOException ex) {
+            throw new MyFileException("Ошибка создания файла!", ex.getStackTrace());
+        }
+    }
 }
