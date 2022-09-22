@@ -2,8 +2,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 public class MyFileException extends Exception {
-    private StackTraceElement[] st;
-    public MyFileException(String errorMessage, StackTraceElement[] st) {
+
+    public MyFileException(String errorMessage) {
         super(errorMessage);
     }
 

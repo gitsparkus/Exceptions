@@ -34,6 +34,7 @@ public class task1 {
     должен увидеть стектрейс ошибки.
      */
 
+    // Основная программа
     public static void main(String[] args) throws AmountOfDataException, NoRequiredDataException, IOException {
         String input = "-";
         Scanner scanner = new Scanner(System.in);
@@ -42,7 +43,8 @@ public class task1 {
 
         while (!input.isEmpty()) {
 
-            System.out.print("Введите данные: ");
+            System.out.print("Введите данные через пробел в формате " +
+                    "Фамилия Имя Отчество датарождения номертелефона пол. Или нажмите Enter для завершения: ");
             input = scanner.nextLine();
 
             if (!input.isEmpty()) {
@@ -51,9 +53,7 @@ public class task1 {
                     checkData(person);
                     try {
                         writeToFilePerson(person);
-                    }
-                    catch (MyFileException ex) {
-                        System.out.println(ex.getMessage());
+                    } catch (MyFileException ex) {
                         System.out.println(ex.getStackTraceAsString());
                     }
                 } catch (AmountOfDataException | NoRequiredDataException ex) {
@@ -64,10 +64,12 @@ public class task1 {
         }
     }
 
+    // Метод проверяет, что передано достаточное количество аргументов, преобразует их в список, разделив по пробелу,
+    // выделяет из них соответствующие условиям и возвращает в виде хэш-таблицы
     public static Map<String, String> parseData(String input) throws AmountOfDataException {
         Map<String, String> person = new HashMap<String, String>();
         List<String> list = new ArrayList<String>(Arrays.asList(input.split(" ")));
-        System.out.println(Arrays.toString(list.toArray()));
+
         if (list.size() > 6) {
             throw new AmountOfDataException("Введено больше данных!");
         }
@@ -76,73 +78,66 @@ public class task1 {
         }
 
         for (String element : list) {
-            if (element.equals("f") || element.equals("m")) {
+            if (!person.containsKey("sex") && (element.equals("f") || element.equals("m"))) {
                 person.put("sex", element);
-            } else if (element.matches("^[0-9]+$")) {
+            } else if (!person.containsKey("phone") && (element.matches("^[0-9]+$"))) {
                 person.put("phone", element);
-            } else if (element.matches("^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$")) {
+            } else if (!person.containsKey("date") && (element.matches("^\\s*(3[01]|[12][0-9]|0?[1-9])\\.(1[012]|0?[1-9])\\.((?:19|20)\\d{2})\\s*$"))) {
                 person.put("date", element);
             } else {
-                if (!person.containsKey("surname")) {
-                    person.put("surname", element);
-                } else if (!person.containsKey("name")) {
-                    person.put("name", element);
-                } else {
-                    person.put("patronymic", element);
+                if (element.matches("^[А-Яа-я]+$")) {
+                    if (!person.containsKey("surname")) {
+                        person.put("surname", element);
+                    } else if (!person.containsKey("name")) {
+                        person.put("name", element);
+                    } else {
+                        person.put("patronymic", element);
+                    }
                 }
             }
         }
         return person;
     }
 
+    // Метод проверяет наличие всех необходимых данных о человеке и в случае их отсутствия бросает исключения
     public static void checkData(Map<String, String> person) throws NoRequiredDataException {
         if (!person.containsKey("sex")) {
             throw new NoRequiredDataException("Не указан пол!");
         }
 
         if (!person.containsKey("phone")) {
-            throw new NoRequiredDataException("Не указан номер телефона!");
+            throw new NoRequiredDataException("Не указан или неверно указан номер телефона!");
         }
 
         if (!person.containsKey("date")) {
-            throw new NoRequiredDataException("Не указана дата!");
+            throw new NoRequiredDataException("Не указана или неверно указана дата!");
         }
 
         if (!person.containsKey("surname")) {
-            throw new NoRequiredDataException("Не указаны Фамилия, Имя или Отчество!");
+            throw new NoRequiredDataException("Не удалось обнаружить Фамилию!");
         }
 
-        person.entrySet().forEach(entry -> {
-            System.out.println(entry.getKey() + " " + entry.getValue());
-        });
+        if (!person.containsKey("name")) {
+            throw new NoRequiredDataException("Не удалось обнаружить Имя!");
+        }
+
+        if (!person.containsKey("patronymic")) {
+            throw new NoRequiredDataException("Не удалось обнаружить Отчество!");
+        }
 
     }
 
+    // Метод записывает или дописывает валидные данные в файл. В случае исключения бросает ошибку записи.
     public static void writeToFilePerson(Map<String, String> person) throws MyFileException {
-        File f = new File(person.get("surname"));
-        try {
-            if (!f.exists()) {
-                f.createNewFile();
-            }
-
-            Scanner scanner = new Scanner(System.in);
-            String input = scanner.nextLine();
-
-
-            try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(person.get("surname"), true)))) {
-
-                out.println("<" + person.get("surname") +
-                        "><" + person.get("name") + "><" +
-                        person.get("patronymic") + "><" +
-                        person.get("date") + "> <" +
-                        person.get("phone") + "><" +
-                        person.get("sex") + ">");
-            }
-            catch (IOException ex) {
-                throw new MyFileException("Ошибка записи в файл!", ex.getStackTrace());
-            }
+        try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(person.get("surname"), true)))) {
+            out.println("<" + person.get("surname") +
+                    "><" + person.get("name") + "><" +
+                    person.get("patronymic") + "><" +
+                    person.get("date") + "> <" +
+                    person.get("phone") + "><" +
+                    person.get("sex") + ">");
         } catch (IOException ex) {
-            throw new MyFileException("Ошибка создания файла!", ex.getStackTrace());
+            throw new MyFileException("Ошибка записи в файл!");
         }
     }
 }
